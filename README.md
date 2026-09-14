@@ -84,6 +84,21 @@ will be built out incrementally.
   prints each list, so semantic and full-text results can be compared side
   by side against the final merged list.
 
+**Step 5: Cross-encoder reranking**
+
+- `src/retrieval/reranker.py` has `ResultReranker`, which uses the
+  cross-encoder model `cross-encoder/ms-marco-MiniLM-L-6-v2` to re-score a
+  list of results. Unlike the bi-encoder used for embeddings, a
+  cross-encoder reads the query and a chunk together in one pass, which is
+  more accurate but too slow to run over an entire chunk collection, so it
+  is used here to re-score only the short candidate list that hybrid
+  retrieval already produced. Its scores are raw, unbounded relevance
+  logits (not a 0-1 similarity), meaningful only for sorting, not for
+  comparing against semantic or full-text scores.
+- `scripts/test_reranking.py` runs a question through Step 4's hybrid
+  retrieval, then reranks the result, printing the order before and after
+  along with a summary of which chunks moved up or down.
+
 ## Setup
 
 ```
@@ -326,3 +341,23 @@ every chunk by meaning, even ones that do not share any words with the
 question, while full-text search only returns chunks that literally
 contain the query's words, but ranks exact matches precisely. The merged
 list promotes chunks found by both to the top.
+
+## Testing reranking
+
+To compare hybrid retrieval's order against the cross-encoder reranked
+order for one question:
+
+```
+python scripts/test_reranking.py "what does a WU grade mean"
+```
+
+With no argument, it uses that same question as a default. Add `--top-k`
+to change how many results are retrieved and reranked (default 5):
+
+```
+python scripts/test_reranking.py "what courses are offered in Fall 2026" --top-k 8
+```
+
+The output prints the hybrid order, the reranked order, and a summary of
+which chunks moved up or down, so you can judge whether reranking pushed
+the chunk that actually answers the question higher.
