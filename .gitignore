@@ -1,0 +1,40 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Editor and OS files
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local data (keep folder structure, ignore actual documents and generated indexes)
+data/sample_pdfs/*
+!data/sample_pdfs/.gitkeep
+data/vector_store/
+*.log
