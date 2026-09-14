@@ -2,3 +2,5 @@ docling>=2.7.0
 tiktoken>=0.7.0
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.1
+sentence-transformers>=3.0.1
+pgvector>=0.3.6

@@ -11,6 +11,7 @@ import os
 
 import psycopg2
 from dotenv import load_dotenv
+from pgvector.psycopg2 import register_vector
 from psycopg2.extensions import connection as PostgresConnection
 
 load_dotenv()
@@ -25,12 +26,22 @@ DEFAULT_PASSWORD = "postgres"
 def get_connection() -> PostgresConnection:
     """Open a new connection to the PostgreSQL database.
 
-    The caller is responsible for closing the connection when done.
+    Ensures the pgvector extension is enabled and registers it with
+    psycopg2, so that Python lists can be passed directly as values for
+    VECTOR columns. The caller is responsible for closing the connection
+    when done.
     """
-    return psycopg2.connect(
+    connection = psycopg2.connect(
         host=os.environ.get("POSTGRES_HOST", DEFAULT_HOST),
         port=os.environ.get("POSTGRES_PORT", DEFAULT_PORT),
         dbname=os.environ.get("POSTGRES_DB", DEFAULT_DATABASE),
         user=os.environ.get("POSTGRES_USER", DEFAULT_USER),
         password=os.environ.get("POSTGRES_PASSWORD", DEFAULT_PASSWORD),
     )
+
+    with connection.cursor() as cursor:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    connection.commit()
+
+    register_vector(connection)
+    return connection

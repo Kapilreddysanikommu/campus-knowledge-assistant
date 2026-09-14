@@ -4,10 +4,15 @@ Defines and creates the database schema for documents and their chunks.
 A document row represents one source file (a syllabus, handbook, policy,
 and so on) along with metadata used to control who can see it. Each chunk
 row is one piece of that document's text, linked back to its document, in
-the order it appeared.
+the order it appeared, along with the embedding vector used for similarity
+search.
 """
 
 from psycopg2.extensions import connection as PostgresConnection
+
+from src.embedding.config import EMBEDDING_DIMENSION
+
+CREATE_VECTOR_EXTENSION = "CREATE EXTENSION IF NOT EXISTS vector"
 
 CREATE_DOCUMENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS documents (
@@ -21,7 +26,7 @@ CREATE_DOCUMENTS_TABLE = """
     )
 """
 
-CREATE_CHUNKS_TABLE = """
+CREATE_CHUNKS_TABLE = f"""
     CREATE TABLE IF NOT EXISTS chunks (
         id BIGSERIAL PRIMARY KEY,
         document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
@@ -29,9 +34,16 @@ CREATE_CHUNKS_TABLE = """
         token_count INTEGER NOT NULL,
         page_number INTEGER,
         chunk_index INTEGER NOT NULL,
+        embedding VECTOR({EMBEDDING_DIMENSION}),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE (document_id, chunk_index)
     )
+"""
+
+# Covers the case where the chunks table was created before the embedding
+# column existed. IF NOT EXISTS makes this a harmless no-op otherwise.
+ADD_EMBEDDING_COLUMN = f"""
+    ALTER TABLE chunks ADD COLUMN IF NOT EXISTS embedding VECTOR({EMBEDDING_DIMENSION})
 """
 
 CREATE_CHUNKS_DOCUMENT_ID_INDEX = """
@@ -40,9 +52,11 @@ CREATE_CHUNKS_DOCUMENT_ID_INDEX = """
 
 
 def create_tables(connection: PostgresConnection) -> None:
-    """Create the documents and chunks tables if they do not already exist."""
+    """Create the vector extension, tables, and index if they do not already exist."""
     with connection.cursor() as cursor:
+        cursor.execute(CREATE_VECTOR_EXTENSION)
         cursor.execute(CREATE_DOCUMENTS_TABLE)
         cursor.execute(CREATE_CHUNKS_TABLE)
+        cursor.execute(ADD_EMBEDDING_COLUMN)
         cursor.execute(CREATE_CHUNKS_DOCUMENT_ID_INDEX)
     connection.commit()

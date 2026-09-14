@@ -1,6 +1,6 @@
 """
-Runs the full Step 1 and Step 2 pipeline: ingest a PDF, chunk it, and store
-everything in PostgreSQL.
+Runs the full pipeline: ingest a PDF, chunk it, generate an embedding for
+each chunk, and store everything in PostgreSQL.
 
 Example:
     python scripts/run_pipeline.py data/sample_pdfs/sample_syllabus.pdf \\
@@ -20,6 +20,7 @@ from src.chunking.text_chunker import (
     DEFAULT_CHUNK_SIZE_TOKENS,
     TextChunker,
 )
+from src.embedding.embedder import ChunkEmbedder
 from src.ingestion.pdf_ingestor import extract_text_from_pdf
 from src.storage.database import get_connection
 from src.storage.repository import DocumentMetadata, insert_chunks, insert_document
@@ -72,6 +73,11 @@ def main() -> None:
     )
     print(f"Split document into {len(chunks)} chunks")
 
+    print("Generating embeddings")
+    embedder = ChunkEmbedder()
+    embeddings = embedder.embed_texts([chunk.text for chunk in chunks])
+    print(f"Generated {len(embeddings)} embeddings")
+
     connection = get_connection()
     try:
         create_tables(connection)
@@ -86,7 +92,7 @@ def main() -> None:
         document_id = insert_document(connection, metadata)
         print(f"Inserted document record with id {document_id}")
 
-        inserted_chunk_count = insert_chunks(connection, document_id, chunks)
+        inserted_chunk_count = insert_chunks(connection, document_id, chunks, embeddings)
         print(f"Inserted {inserted_chunk_count} chunk records")
     finally:
         connection.close()

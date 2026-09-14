@@ -11,7 +11,8 @@ generate grounded answers.
 src/
     ingestion/    Extracts text and structure from source documents (PDFs, etc.)
     chunking/     Splits extracted text into overlapping chunks sized for embedding
-    storage/      Stores documents and chunks in PostgreSQL
+    embedding/    Generates vector embeddings for chunk text using a local model
+    storage/      Stores documents, chunks, and their embeddings in PostgreSQL
     retrieval/    Finds the most relevant chunks for a given user query
     generation/   Generates a final answer from retrieved chunks using an LLM
     evaluation/   Measures retrieval and answer quality
@@ -50,6 +51,22 @@ will be built out incrementally.
 - `scripts/run_pipeline.py` runs the full pipeline end to end: ingest a
   PDF, chunk it, then store the document and chunk rows in PostgreSQL.
 
+**Step 3: Embeddings and vector storage**
+
+- The [pgvector](https://github.com/pgvector/pgvector) PostgreSQL extension
+  is enabled, and `chunks.embedding` stores each chunk's vector.
+- `src/embedding/embedder.py` generates embeddings locally using the
+  sentence-transformers model `all-MiniLM-L6-v2`. It runs on CPU, needs no
+  API key, and produces no ongoing API cost.
+- `src/embedding/similarity.py` computes cosine similarity between two
+  embedding vectors.
+- `scripts/run_pipeline.py` now generates an embedding for every chunk
+  before storing it.
+- `scripts/test_embedding_similarity.py` is a manual test script: it
+  embeds a topically similar pair of texts and a topically different pair,
+  then prints the cosine similarity for each so you can confirm the
+  similar pair scores higher.
+
 ## Setup
 
 ```
@@ -69,8 +86,13 @@ copy .env.example .env
 
 The project expects PostgreSQL reachable at the host, port, database name,
 user, and password in `.env` (defaults: `localhost:5432`, database
-`campus_knowledge_assistant`, user `postgres`, password `postgres`). Pick
-one of the following.
+`campus_knowledge_assistant`, user `postgres`, password `postgres`). It
+also requires the [pgvector](https://github.com/pgvector/pgvector)
+extension, since chunk embeddings are stored as a `VECTOR` column.
+`psql`'s default `postgres:16` image does not include pgvector, so this
+project uses `pgvector/pgvector:pg16` instead, which is the official
+pgvector image built on top of `postgres:16` (same PostgreSQL version,
+extension pre-installed). Pick one of the following.
 
 **Option A: Docker (used for this project's local setup)**
 
@@ -80,7 +102,7 @@ docker run --name campus-postgres ^
   -e POSTGRES_DB=campus_knowledge_assistant ^
   -p 5432:5432 ^
   -v campus-postgres-data:/var/lib/postgresql/data ^
-  -d postgres:16
+  -d pgvector/pgvector:pg16
 ```
 
 This requires Docker Desktop to be running first. Check the container is
@@ -95,6 +117,17 @@ To stop and restart it later:
 ```
 docker stop campus-postgres
 docker start campus-postgres
+```
+
+If you already have a `campus-postgres` container running the plain
+`postgres:16` image from an earlier step, switch images without losing
+data by stopping and removing the old container, then running the command
+above again. The named volume (`campus-postgres-data`) holds the actual
+data files and is untouched by removing the container itself:
+
+```
+docker stop campus-postgres
+docker rm campus-postgres
 ```
 
 **Option B: Native install via winget (run in an elevated PowerShell)**
@@ -119,10 +152,16 @@ Then create the project database:
 & "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "CREATE DATABASE campus_knowledge_assistant;"
 ```
 
-The database tables themselves do not need to be created manually.
-`scripts/run_pipeline.py` calls `create_tables()` on every run, which is
-safe to call repeatedly since it only creates tables that do not already
-exist.
+pgvector is not bundled with the native Windows installer. Building it
+from source on Windows is involved enough that Docker (Option A) is the
+easier path for local development; if you need a native install with
+pgvector, see the
+[pgvector Windows build instructions](https://github.com/pgvector/pgvector#windows).
+
+The database tables, the pgvector extension, and the embedding column do
+not need to be set up manually. `scripts/run_pipeline.py` calls
+`create_tables()` on every run, which enables the extension and creates
+anything missing, and is safe to call repeatedly.
 
 ## Testing ingestion and chunking
 
@@ -148,7 +187,24 @@ python scripts/run_pipeline.py data/sample_pdfs/your_file.pdf --title "CS 101 Sy
 
 `--department`, `--academic-year`, `--chunk-size`, and `--chunk-overlap`
 are optional. `--access-level` defaults to `public` and must be one of
-`public`, `student`, `faculty`, or `admin`.
+`public`, `student`, `faculty`, or `admin`. Each chunk's embedding is
+generated locally before insertion; the first run downloads the
+sentence-transformers model (roughly 80MB) and caches it for later runs.
+
+## Testing embeddings
+
+To confirm the embedding model produces higher similarity scores for
+related text than for unrelated text:
+
+```
+python scripts/test_embedding_similarity.py
+```
+
+Or supply your own text to compare:
+
+```
+python scripts/test_embedding_similarity.py --similar-a "..." --similar-b "..." --different-a "..." --different-b "..."
+```
 
 ### Verifying the data landed correctly
 
@@ -184,4 +240,9 @@ FROM documents
 LEFT JOIN chunks ON chunks.document_id = documents.id
 GROUP BY documents.id, documents.title
 ORDER BY documents.id;
+
+-- Confirm embeddings were stored with the expected dimension
+SELECT id, chunk_index, vector_dims(embedding) AS embedding_dimensions
+FROM chunks
+ORDER BY id;
 ```

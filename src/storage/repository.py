@@ -34,8 +34,8 @@ INSERT_DOCUMENT_QUERY = """
 """
 
 INSERT_CHUNK_QUERY = """
-    INSERT INTO chunks (document_id, chunk_text, token_count, page_number, chunk_index)
-    VALUES (%s, %s, %s, %s, %s)
+    INSERT INTO chunks (document_id, chunk_text, token_count, page_number, chunk_index, embedding)
+    VALUES (%s, %s, %s, %s, %s, %s)
 """
 
 
@@ -63,16 +63,27 @@ def insert_document(connection: PostgresConnection, metadata: DocumentMetadata) 
     return document_id
 
 
-def insert_chunks(connection: PostgresConnection, document_id: int, chunks: List[TextChunk]) -> int:
+def insert_chunks(
+    connection: PostgresConnection,
+    document_id: int,
+    chunks: List[TextChunk],
+    embeddings: List[List[float]],
+) -> int:
     """Insert every chunk belonging to a document and return how many were inserted.
 
-    page_number is stored as NULL for now, since the Step 1 chunker works
-    from a single flattened Markdown string and does not yet track which
-    PDF page each chunk came from.
+    embeddings must be the same length as chunks, with embeddings[i] being
+    the vector for chunks[i]. page_number is stored as NULL for now, since
+    the Step 1 chunker works from a single flattened Markdown string and
+    does not yet track which PDF page each chunk came from.
     """
+    if len(chunks) != len(embeddings):
+        raise ValueError(
+            f"chunks and embeddings must have the same length, got {len(chunks)} and {len(embeddings)}"
+        )
+
     rows = [
-        (document_id, chunk.text, chunk.token_count, None, chunk.chunk_index)
-        for chunk in chunks
+        (document_id, chunk.text, chunk.token_count, None, chunk.chunk_index, embedding)
+        for chunk, embedding in zip(chunks, embeddings)
     ]
 
     with connection.cursor() as cursor:
