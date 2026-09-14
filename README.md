@@ -99,6 +99,29 @@ will be built out incrementally.
   retrieval, then reranks the result, printing the order before and after
   along with a summary of which chunks moved up or down.
 
+**Step 6: Role-based access control (RBAC) in FastAPI**
+
+- `src/api/access_control.py` maps a role (`student`, `faculty`, `admin`)
+  to the list of `documents.access_level` values that role may search.
+  `student` sees `public` and `student`; `faculty` additionally sees
+  `faculty`; `admin` sees everything.
+- `src/api/main.py` is a minimal FastAPI app with one endpoint,
+  `POST /query`. Authentication is a single `X-User-Role` request header
+  rather than a full login system (see the module docstring for why that
+  is a reasonable simplification for a demo). The role resolves to an
+  allowed access level list *before* retrieval runs, and that list is
+  passed into `semantic_search` and `full_text_search`, both of which now
+  require it (there is no default that silently searches everything).
+  Each function adds `AND documents.access_level = ANY(%s)` to its SQL
+  `WHERE` clause, so a document outside the caller's allowed levels is
+  never fetched from the database, not fetched and then hidden from the
+  response.
+- `scripts/test_rbac_query.py` proves this two ways: first by calling the
+  retrieval functions directly for a student and a faculty role and
+  listing which documents came back as raw SQL candidates (before
+  combining or reranking), then by calling the real `/query` endpoint for
+  both roles and printing the full results side by side.
+
 ## Setup
 
 ```
@@ -361,3 +384,39 @@ python scripts/test_reranking.py "what courses are offered in Fall 2026" --top-k
 The output prints the hybrid order, the reranked order, and a summary of
 which chunks moved up or down, so you can judge whether reranking pushed
 the chunk that actually answers the question higher.
+
+## Running the API
+
+Start the FastAPI application with:
+
+```
+python -m uvicorn src.api.main:app --reload
+```
+
+Then send a request with a role header, for example using curl:
+
+```
+curl -X POST http://127.0.0.1:8000/query ^
+  -H "Content-Type: application/json" ^
+  -H "X-User-Role: student" ^
+  -d "{\"question\": \"what is the process for a grade appeal\"}"
+```
+
+`X-User-Role` must be `student`, `faculty`, or `admin`; any other value
+returns a 400 error. Interactive API docs are available at
+`http://127.0.0.1:8000/docs` once the server is running.
+
+## Testing role-based access control
+
+To see proof that a student's search never retrieves chunks from a
+faculty-only document, compared against a faculty search for the same
+question:
+
+```
+python scripts/test_rbac_query.py "what is the process for a grade appeal"
+```
+
+The first part of the output calls the retrieval functions directly and
+lists which documents came back as raw candidates for each role, before
+any combining or reranking happens. The second part shows the full
+`/query` endpoint results for both roles side by side.

@@ -25,6 +25,12 @@ DEFAULT_TOP_K = 5
 # information retrieval literature and is a reasonable default here.
 DEFAULT_RRF_K = 60
 
+# Every access level that exists in the documents table. Passing this to
+# semantic_search or full_text_search means "do not restrict by access
+# level" (used by callers, such as the manual test scripts, that are not
+# enforcing role-based access control).
+ALL_ACCESS_LEVELS = ["public", "student", "faculty", "admin"]
+
 SEMANTIC_SEARCH_QUERY = """
     SELECT
         chunks.id,
@@ -36,6 +42,7 @@ SEMANTIC_SEARCH_QUERY = """
     FROM chunks
     JOIN documents ON documents.id = chunks.document_id
     WHERE chunks.embedding IS NOT NULL
+      AND documents.access_level = ANY(%s)
     ORDER BY chunks.embedding <=> %s::vector
     LIMIT %s
 """
@@ -51,6 +58,7 @@ FULL_TEXT_SEARCH_QUERY = """
     FROM chunks
     JOIN documents ON documents.id = chunks.document_id
     WHERE chunks.search_vector @@ websearch_to_tsquery('english', %s)
+      AND documents.access_level = ANY(%s)
     ORDER BY rank DESC
     LIMIT %s
 """
@@ -60,9 +68,18 @@ def semantic_search(
     connection: PostgresConnection,
     embedder: ChunkEmbedder,
     query_text: str,
+    allowed_access_levels: List[str],
     top_k: int = DEFAULT_TOP_K,
 ) -> List[SearchResult]:
     """Find the top_k chunks whose embeddings are closest to the query's embedding.
+
+    allowed_access_levels restricts the search to documents.access_level
+    values in that list. This filter is applied inside the SQL WHERE
+    clause, so chunks from a document outside the allowed levels are
+    excluded before ranking or limiting happens, not filtered out of an
+    already-computed result afterward. There is no default: every caller
+    must state which access levels it is permitted to search (pass
+    ALL_ACCESS_LEVELS for no restriction).
 
     Uses pgvector's cosine distance operator (<=>). Since embeddings are
     normalized, distance ranges from 0 (same direction, most similar) to 2
@@ -72,7 +89,10 @@ def semantic_search(
     query_embedding = embedder.embed_text(query_text)
 
     with connection.cursor() as cursor:
-        cursor.execute(SEMANTIC_SEARCH_QUERY, (query_embedding, query_embedding, top_k))
+        cursor.execute(
+            SEMANTIC_SEARCH_QUERY,
+            (query_embedding, list(allowed_access_levels), query_embedding, top_k),
+        )
         rows = cursor.fetchall()
 
     return [
@@ -92,9 +112,15 @@ def semantic_search(
 def full_text_search(
     connection: PostgresConnection,
     query_text: str,
+    allowed_access_levels: List[str],
     top_k: int = DEFAULT_TOP_K,
 ) -> List[SearchResult]:
     """Find the top_k chunks whose text best matches the query's search terms.
+
+    allowed_access_levels restricts the search to documents.access_level
+    values in that list, applied inside the SQL WHERE clause for the same
+    reason as in semantic_search. Pass ALL_ACCESS_LEVELS for no
+    restriction.
 
     Uses PostgreSQL full-text search: websearch_to_tsquery parses query_text
     the way a search engine would (splitting into words, dropping common
@@ -102,7 +128,10 @@ def full_text_search(
     chunk's search_vector matches those words.
     """
     with connection.cursor() as cursor:
-        cursor.execute(FULL_TEXT_SEARCH_QUERY, (query_text, query_text, top_k))
+        cursor.execute(
+            FULL_TEXT_SEARCH_QUERY,
+            (query_text, query_text, list(allowed_access_levels), top_k),
+        )
         rows = cursor.fetchall()
 
     return [

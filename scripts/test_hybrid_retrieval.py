@@ -19,7 +19,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.embedding.embedder import ChunkEmbedder
 from src.retrieval.models import SearchResult
-from src.retrieval.search import DEFAULT_TOP_K, combine_search_results, full_text_search, semantic_search
+from src.retrieval.search import (
+    ALL_ACCESS_LEVELS,
+    DEFAULT_TOP_K,
+    combine_search_results,
+    full_text_search,
+    semantic_search,
+)
 from src.storage.database import get_connection
 
 DEFAULT_QUESTION = "what is the grading breakdown"
@@ -65,10 +71,12 @@ def main() -> None:
 
         print(f'Question: "{args.question}"\n')
 
-        semantic_results = semantic_search(connection, embedder, args.question, top_k=args.top_k)
+        semantic_results = semantic_search(
+            connection, embedder, args.question, ALL_ACCESS_LEVELS, top_k=args.top_k
+        )
         print_results("Semantic search results:", semantic_results)
 
-        full_text_results = full_text_search(connection, args.question, top_k=args.top_k)
+        full_text_results = full_text_search(connection, args.question, ALL_ACCESS_LEVELS, top_k=args.top_k)
         print_results("Full-text search results:", full_text_results)
 
         combined_results = combine_search_results(semantic_results, full_text_results, top_k=args.top_k)
