@@ -27,3 +27,4 @@ class QueryResponse(BaseModel):
     role: str
     allowed_access_levels: List[str]
     results: List[QueryResultItem]
+    staleness_notes: List[str]

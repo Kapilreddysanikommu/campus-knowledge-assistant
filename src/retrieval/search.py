@@ -38,7 +38,9 @@ SEMANTIC_SEARCH_QUERY = """
         documents.title,
         chunks.chunk_index,
         chunks.chunk_text,
-        chunks.embedding <=> %s::vector AS distance
+        chunks.embedding <=> %s::vector AS distance,
+        documents.department,
+        documents.academic_year
     FROM chunks
     JOIN documents ON documents.id = chunks.document_id
     WHERE chunks.embedding IS NOT NULL
@@ -54,7 +56,9 @@ FULL_TEXT_SEARCH_QUERY = """
         documents.title,
         chunks.chunk_index,
         chunks.chunk_text,
-        ts_rank(chunks.search_vector, websearch_to_tsquery('english', %s)) AS rank
+        ts_rank(chunks.search_vector, websearch_to_tsquery('english', %s)) AS rank,
+        documents.department,
+        documents.academic_year
     FROM chunks
     JOIN documents ON documents.id = chunks.document_id
     WHERE chunks.search_vector @@ websearch_to_tsquery('english', %s)
@@ -103,6 +107,8 @@ def semantic_search(
             chunk_index=row[3],
             chunk_text=row[4],
             score=1.0 - row[5],
+            department=row[6],
+            academic_year=row[7],
             matched_by=["semantic"],
         )
         for row in rows
@@ -142,6 +148,8 @@ def full_text_search(
             chunk_index=row[3],
             chunk_text=row[4],
             score=row[5],
+            department=row[6],
+            academic_year=row[7],
             matched_by=["full_text"],
         )
         for row in rows
@@ -182,6 +190,8 @@ def combine_search_results(
             chunk_index=result_by_chunk_id[chunk_id].chunk_index,
             chunk_text=result_by_chunk_id[chunk_id].chunk_text,
             score=fused_score,
+            department=result_by_chunk_id[chunk_id].department,
+            academic_year=result_by_chunk_id[chunk_id].academic_year,
             matched_by=matched_by_chunk_id[chunk_id],
         )
         for chunk_id, fused_score in fused_scores.items()

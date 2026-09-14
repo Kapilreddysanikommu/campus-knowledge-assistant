@@ -122,6 +122,30 @@ will be built out incrementally.
   combining or reranking), then by calling the real `/query` endpoint for
   both roles and printing the full results side by side.
 
+**Step 7: Staleness detection**
+
+- `src/retrieval/staleness.py` catches a specific problem: two documents
+  covering the same topic but published in different academic years, one
+  possibly superseding the other, both showing up in the same result
+  list. There is no topic classifier in this project, so it reuses a
+  signal retrieval already produced instead of building one: if two
+  chunks from different-year documents both made it into the same
+  reranked top-k list for the same question, the reranker already judged
+  both relevant to it; requiring them to also share a department is a
+  cheap guard against unrelated documents coincidentally both being old.
+  When this is detected, a `StalenessNote` explaining it is always
+  produced, and if an older document's chunk scored only about as well as
+  (within `DEFAULT_RECENCY_TIE_BREAK_MARGIN`) the newest document's chunk
+  on the same topic, the newer one is moved above it; a clearly stronger
+  older result is left in place, since a wide score gap means the
+  reranker found something more directly relevant to this specific
+  question. Only the order changes, never the score value a caller sees.
+- `src/api/main.py` applies `detect_and_apply_staleness` after reranking,
+  and `POST /query` now also returns `staleness_notes`.
+- `scripts/test_staleness_detection.py` shows the reranked order with and
+  without staleness detection side by side, along with the notes, then
+  confirms the same behavior through the real `/query` endpoint.
+
 ## Setup
 
 ```
@@ -420,3 +444,26 @@ The first part of the output calls the retrieval functions directly and
 lists which documents came back as raw candidates for each role, before
 any combining or reranking happens. The second part shows the full
 `/query` endpoint results for both roles side by side.
+
+## Testing staleness detection
+
+To compare retrieval results with and without staleness detection for a
+question that multiple documents from different years could plausibly
+answer:
+
+```
+python scripts/test_staleness_detection.py "what is SJSU's basic grading system"
+```
+
+Add `--role` (`student`, `faculty`, or `admin`, default `student`) or
+`--top-k` to adjust the search:
+
+```
+python scripts/test_staleness_detection.py "how many credit/no credit units can I use" --top-k 8
+```
+
+The output shows the reranked order before staleness detection, the
+reordered result after it runs, and the staleness notes explaining which
+documents and years were found to overlap. A close-scoring older result
+moves below the newest result on the same topic; a clearly stronger older
+result is left where the reranker placed it.

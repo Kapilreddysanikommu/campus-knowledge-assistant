@@ -19,6 +19,7 @@ from src.api.schemas import QueryRequest, QueryResponse, QueryResultItem
 from src.embedding.embedder import ChunkEmbedder
 from src.retrieval.reranker import ResultReranker
 from src.retrieval.search import combine_search_results, full_text_search, semantic_search
+from src.retrieval.staleness import detect_and_apply_staleness
 from src.storage.database import get_connection
 
 app = FastAPI(title="Campus Knowledge Assistant API")
@@ -65,6 +66,12 @@ def query_documents(
     which include it in their SQL WHERE clause. Chunks belonging to a
     document outside the allowed levels are therefore never fetched from
     the database at all, not fetched and then discarded afterward.
+
+    After reranking, detect_and_apply_staleness checks whether the top
+    results span documents from the same department but different
+    academic years, moves a close-scoring older result below the newest
+    one on the same topic, and returns a plain-language note for every
+    such case found.
     """
     allowed_access_levels = get_allowed_access_levels(role)
 
@@ -76,6 +83,7 @@ def query_documents(
     )
     hybrid_results = combine_search_results(semantic_results, full_text_results, top_k=request.top_k)
     reranked_results = reranker.rerank(request.question, hybrid_results)
+    final_results, staleness_notes = detect_and_apply_staleness(reranked_results)
 
     return QueryResponse(
         question=request.question,
@@ -89,6 +97,7 @@ def query_documents(
                 score=result.score,
                 matched_by=result.matched_by,
             )
-            for result in reranked_results
+            for result in final_results
         ],
+        staleness_notes=[note.message for note in staleness_notes],
     )

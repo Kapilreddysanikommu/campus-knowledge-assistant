@@ -47,6 +47,8 @@ class ResultReranker:
                 chunk_index=result.chunk_index,
                 chunk_text=result.chunk_text,
                 score=float(relevance_score),
+                department=result.department,
+                academic_year=result.academic_year,
                 matched_by=result.matched_by,
             )
             for result, relevance_score in zip(results, relevance_scores)

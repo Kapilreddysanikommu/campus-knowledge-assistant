@@ -3,7 +3,7 @@ Shared data structure returned by every retrieval function.
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -16,4 +16,6 @@ class SearchResult:
     chunk_index: int
     chunk_text: str
     score: float
+    department: Optional[str] = None
+    academic_year: Optional[str] = None
     matched_by: List[str] = field(default_factory=list)
