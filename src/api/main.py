@@ -18,6 +18,7 @@ from src.api.access_control import VALID_ROLES, get_allowed_access_levels
 from src.api.schemas import QueryRequest, QueryResponse, QueryResultItem
 from src.embedding.embedder import ChunkEmbedder
 from src.generation.generator import AnswerGenerator
+from src.observability.tracing import get_tracing_client
 from src.retrieval.reranker import ResultReranker
 from src.retrieval.search import combine_search_results, full_text_search, semantic_search
 from src.retrieval.staleness import detect_and_apply_staleness
@@ -31,6 +32,7 @@ app = FastAPI(title="Campus Knowledge Assistant API")
 embedder = ChunkEmbedder()
 reranker = ResultReranker()
 generator = AnswerGenerator()
+tracing_client = get_tracing_client()
 
 
 def get_user_role(x_user_role: str = Header(...)) -> str:
@@ -81,19 +83,81 @@ def query_documents(
     allowed access levels) to Claude, which must answer using only that
     text and cite its sources, or say it does not have enough information
     rather than guess.
-    """
-    allowed_access_levels = get_allowed_access_levels(role)
 
-    semantic_results = semantic_search(
-        connection, embedder, request.question, allowed_access_levels, top_k=request.top_k
-    )
-    full_text_results = full_text_search(
-        connection, request.question, allowed_access_levels, top_k=request.top_k
-    )
-    hybrid_results = combine_search_results(semantic_results, full_text_results, top_k=request.top_k)
-    reranked_results = reranker.rerank(request.question, hybrid_results)
-    final_results, staleness_notes = detect_and_apply_staleness(reranked_results)
-    generated_answer = generator.generate_answer(request.question, final_results)
+    Every stage is wrapped in a Langfuse observation, so a trace for this
+    request records the timing and input/output of retrieval, reranking,
+    staleness detection, and generation individually, alongside the
+    overall request. The trace is flushed before returning so it is
+    available to read back immediately, which costs a little latency per
+    request but keeps this demo simple; a production deployment would
+    typically let the SDK batch and flush traces in the background
+    instead.
+    """
+    with tracing_client.start_as_current_observation(
+        name="query_documents",
+        as_type="span",
+        input={"question": request.question, "role": role, "top_k": request.top_k},
+    ) as root_observation:
+        trace_id = tracing_client.get_current_trace_id()
+
+        allowed_access_levels = get_allowed_access_levels(role)
+
+        with tracing_client.start_as_current_observation(
+            name="retrieval",
+            as_type="retriever",
+            input={"question": request.question, "allowed_access_levels": allowed_access_levels},
+        ) as retrieval_observation:
+            semantic_results = semantic_search(
+                connection, embedder, request.question, allowed_access_levels, top_k=request.top_k
+            )
+            full_text_results = full_text_search(
+                connection, request.question, allowed_access_levels, top_k=request.top_k
+            )
+            hybrid_results = combine_search_results(semantic_results, full_text_results, top_k=request.top_k)
+            retrieval_observation.update(
+                output={
+                    "semantic_result_count": len(semantic_results),
+                    "full_text_result_count": len(full_text_results),
+                    "combined_result_count": len(hybrid_results),
+                }
+            )
+
+        with tracing_client.start_as_current_observation(
+            name="reranking", as_type="span", input={"candidate_count": len(hybrid_results)}
+        ) as rerank_observation:
+            reranked_results = reranker.rerank(request.question, hybrid_results)
+            rerank_observation.update(output={"result_count": len(reranked_results)})
+
+        with tracing_client.start_as_current_observation(
+            name="staleness_detection", as_type="span", input={"candidate_count": len(reranked_results)}
+        ) as staleness_observation:
+            final_results, staleness_notes = detect_and_apply_staleness(reranked_results)
+            staleness_observation.update(
+                output={"note_count": len(staleness_notes), "result_count": len(final_results)}
+            )
+
+        with tracing_client.start_as_current_observation(
+            name="generation",
+            as_type="generation",
+            model=generator.model_name,
+            input={"question": request.question, "chunk_count": len(final_results)},
+        ) as generation_observation:
+            generated_answer = generator.generate_answer(request.question, final_results)
+            generation_observation.update(
+                output={
+                    "answer": generated_answer.answer,
+                    "has_sufficient_information": generated_answer.has_sufficient_information,
+                }
+            )
+
+        root_observation.update(
+            output={
+                "has_sufficient_information": generated_answer.has_sufficient_information,
+                "result_count": len(final_results),
+            }
+        )
+
+    tracing_client.flush()
 
     return QueryResponse(
         question=request.question,
@@ -112,4 +176,5 @@ def query_documents(
         staleness_notes=[note.message for note in staleness_notes],
         answer=generated_answer.answer,
         has_sufficient_information=generated_answer.has_sufficient_information,
+        trace_id=trace_id,
     )

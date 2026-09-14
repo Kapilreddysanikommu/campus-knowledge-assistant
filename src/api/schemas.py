@@ -2,7 +2,7 @@
 Request and response models for the API.
 """
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -30,3 +30,4 @@ class QueryResponse(BaseModel):
     staleness_notes: List[str]
     answer: str
     has_sufficient_information: bool
+    trace_id: Optional[str] = None

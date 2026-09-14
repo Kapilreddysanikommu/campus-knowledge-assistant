@@ -201,6 +201,31 @@ will be built out incrementally.
   Ragas scores, a per-category breakdown, and every low-scoring or
   failing case by name so weak spots are easy to find.
 
+**Step 10: Observability**
+
+- `src/observability/tracing.py` returns a singleton Langfuse client
+  configured from `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and
+  `LANGFUSE_HOST`.
+- `src/api/main.py` wraps each pipeline stage in the `/query` endpoint in
+  its own Langfuse observation: `retrieval` (typed as a retriever, input
+  is the question and allowed access levels, output is how many
+  candidates each search method returned), `reranking`, `staleness_detection`,
+  and `generation` (typed as a generation, recording the model name), all
+  nested under one `query_documents` observation for the request as a
+  whole. Langfuse records the start and end time of every observation
+  automatically, so per-stage and total latency are read back from
+  Langfuse itself rather than computed locally. The trace is flushed
+  before the response is returned, trading a little per-request latency
+  for making the trace available to read back immediately, which a
+  production deployment would typically avoid by flushing in the
+  background instead. `POST /query` now also returns `trace_id`.
+- `scripts/test_tracing.py` sends a handful of real queries covering an
+  answerable case, an RBAC-blocked refusal, a no-answer-anywhere refusal,
+  and a permitted faculty-only case, then reads each one back from
+  Langfuse's API and prints per-stage timing, total latency, and whether
+  the request was answered or refused, as a stand-in for a dashboard
+  screenshot.
+
 ## Setup
 
 ```
@@ -219,6 +244,11 @@ copy .env.example .env
 Then set `ANTHROPIC_API_KEY` in `.env` to your own Claude API key. This is
 required for answer generation (Step 8); everything before that step
 works without it.
+
+Set `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in `.env` to trace
+`/query` requests (Step 10); get these from a project at
+cloud.langfuse.com, or set `LANGFUSE_HOST` to a self-hosted instance's
+URL. Everything before Step 10 works without these set.
 
 ## Setting up PostgreSQL
 
@@ -558,3 +588,18 @@ several minutes. The summary reports the overall pass rate, average
 faithfulness, context precision, and context recall, a per-category
 breakdown, and every low-scoring or failing case by id and question, so
 weak spots can be looked up directly in the test set file.
+
+## Testing observability
+
+Requires `ANTHROPIC_API_KEY`, `LANGFUSE_PUBLIC_KEY`, and
+`LANGFUSE_SECRET_KEY` to be set in `.env`. Sends a handful of real
+queries through the traced `/query` endpoint, waits for Langfuse to
+finish ingesting them, then reads each trace back and prints the timing
+Langfuse actually recorded for every pipeline stage:
+
+```
+python scripts/test_tracing.py
+```
+
+Each trace is also viewable directly in the Langfuse dashboard using the
+`trace_id` the script prints for it.
