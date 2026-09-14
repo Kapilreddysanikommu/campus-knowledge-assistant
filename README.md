@@ -49,7 +49,9 @@ will be built out incrementally.
 - `src/storage/repository.py` inserts a document's metadata and its chunks
   into those tables.
 - `scripts/run_pipeline.py` runs the full pipeline end to end: ingest a
-  PDF, chunk it, then store the document and chunk rows in PostgreSQL.
+  PDF, chunk it, then store the document and chunk rows in PostgreSQL. It
+  can process a single PDF given as an argument, or a batch of PDFs listed
+  in a JSON manifest (`--manifest`), each with its own metadata.
 
 **Step 3: Embeddings and vector storage**
 
@@ -66,6 +68,21 @@ will be built out incrementally.
   embeds a topically similar pair of texts and a topically different pair,
   then prints the cosine similarity for each so you can confirm the
   similar pair scores higher.
+
+**Step 4: Hybrid retrieval**
+
+- `chunks.search_vector` is a generated `tsvector` column (computed
+  automatically from `chunk_text` by PostgreSQL) with a GIN index, used for
+  full-text search.
+- `src/retrieval/search.py` has three functions: `semantic_search` embeds
+  the query and finds the closest chunks by pgvector cosine distance;
+  `full_text_search` uses PostgreSQL's `websearch_to_tsquery` and `ts_rank`
+  to find chunks matching the query's words; `combine_search_results`
+  merges both ranked lists into one using Reciprocal Rank Fusion, with no
+  duplicate chunks.
+- `scripts/test_hybrid_retrieval.py` runs a question through all three and
+  prints each list, so semantic and full-text results can be compared side
+  by side against the final merged list.
 
 ## Setup
 
@@ -191,6 +208,36 @@ are optional. `--access-level` defaults to `public` and must be one of
 generated locally before insertion; the first run downloads the
 sentence-transformers model (roughly 80MB) and caches it for later runs.
 
+### Processing multiple PDFs in one run
+
+To ingest several PDFs at once, each with its own metadata, use a JSON
+manifest instead of the single-file flags:
+
+```
+python scripts/run_pipeline.py --manifest data/document_manifest.json
+```
+
+The manifest is a list of objects, one per PDF:
+
+```json
+[
+  {
+    "pdf_path": "data/sample_pdfs/example.pdf",
+    "title": "Example Document",
+    "department": "Registrar",
+    "academic_year": "2025-2026",
+    "access_level": "student"
+  }
+]
+```
+
+`department`, `academic_year`, and `access_level` are optional in each
+entry (`access_level` defaults to `public` if omitted). `--chunk-size` and
+`--chunk-overlap` still apply to every document in the manifest. If one
+PDF fails to process, the script reports the error and continues with the
+rest of the manifest rather than stopping the whole run; the final line
+reports how many documents succeeded and how many failed.
+
 ## Testing embeddings
 
 To confirm the embedding model produces higher similarity scores for
@@ -230,6 +277,17 @@ JOIN documents ON documents.id = chunks.document_id
 ORDER BY chunks.id
 LIMIT 1;
 
+-- Title, access level, and chunk count for every document, useful after
+-- a batch run to confirm everything from a manifest landed correctly
+SELECT
+    documents.title,
+    documents.access_level,
+    count(chunks.id) AS chunk_count
+FROM documents
+LEFT JOIN chunks ON chunks.document_id = documents.id
+GROUP BY documents.id, documents.title, documents.access_level
+ORDER BY documents.id;
+
 -- Chunk count and total tokens per document, useful for spotting a document
 -- that ingested with far fewer chunks than expected
 SELECT
@@ -246,3 +304,25 @@ SELECT id, chunk_index, vector_dims(embedding) AS embedding_dimensions
 FROM chunks
 ORDER BY id;
 ```
+
+## Testing hybrid retrieval
+
+To compare semantic search, full-text search, and the merged hybrid list
+for one question:
+
+```
+python scripts/test_hybrid_retrieval.py "what is the grading breakdown"
+```
+
+With no argument, it uses that same question as a default. Add `--top-k`
+to change how many results are shown per search type (default 5):
+
+```
+python scripts/test_hybrid_retrieval.py "when is the midterm exam" --top-k 3
+```
+
+The output shows why each search type matters: semantic search ranks
+every chunk by meaning, even ones that do not share any words with the
+question, while full-text search only returns chunks that literally
+contain the query's words, but ranks exact matches precisely. The merged
+list promotes chunks found by both to the top.

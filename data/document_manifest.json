@@ -1,0 +1,58 @@
+[
+  {
+    "pdf_path": "data/sample_pdfs/msadi_program_overview.pdf",
+    "title": "MSADI Program Overview",
+    "department": "Applied Data Science",
+    "academic_year": "2026",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/msadi_admissions.pdf",
+    "title": "MSADI Admission Requirements",
+    "department": "Applied Data Science",
+    "academic_year": "2026",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/msadi_curriculum.pdf",
+    "title": "MSADI Curriculum and Courses",
+    "department": "Applied Data Science",
+    "academic_year": "2026",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/msadi_catalog.pdf",
+    "title": "MSADI Catalog Program Page",
+    "department": "Applied Data Science",
+    "academic_year": "2026",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/sjsu_grading_symbols_2022.pdf.pdf",
+    "title": "Grading Symbols, Drop and Withdrawal Policy",
+    "department": "University-wide",
+    "academic_year": "2022",
+    "access_level": "faculty"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/sjsu_grading_system_2018.pdf.pdf",
+    "title": "University Grading System Policy",
+    "department": "University-wide",
+    "academic_year": "2018",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/sjsu_grading_policy_1988.pdf.pdf",
+    "title": "Non-Traditional Grading Policy",
+    "department": "University-wide",
+    "academic_year": "1988",
+    "access_level": "student"
+  },
+  {
+    "pdf_path": "data/sample_pdfs/sjsu_credit_nocredit_2020.pdf.pdf",
+    "title": "Credit/No Credit Grading Policy",
+    "department": "University-wide",
+    "academic_year": "2020",
+    "access_level": "student"
+  }
+]
