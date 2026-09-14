@@ -18,6 +18,7 @@ src/
     evaluation/   Measures retrieval and answer quality
 scripts/          Small, runnable scripts for manually testing each stage
 data/             Local data, such as sample PDFs (not committed to git)
+frontend/         React single-page chat interface for the /query endpoint
 ```
 
 Each subfolder under `src/` corresponds to one stage of the RAG pipeline and
@@ -225,6 +226,22 @@ will be built out incrementally.
   Langfuse's API and prints per-stage timing, total latency, and whether
   the request was answered or refused, as a stand-in for a dashboard
   screenshot.
+
+**Step 11: Chat interface**
+
+- `frontend/` is a small React single-page app (Vite, no routing or
+  state management library) with a role selector, a question box, and a
+  submit button that calls `POST /query` with the question and an
+  `X-User-Role` header.
+- A refused answer (`has_sufficient_information: false`) is rendered in
+  its own clearly labeled panel, styled distinctly from both a normal
+  answer and an actual request failure, so a refusal never looks like an
+  error.
+- A successful answer lists its source document titles (deduplicated
+  from the result chunks) and any staleness notes underneath it.
+- The dev server proxies `/query` to the FastAPI backend (see
+  `frontend/vite.config.js`), so the two run as separate processes in
+  development with no CORS configuration needed on the backend.
 
 ## Setup
 
@@ -603,3 +620,24 @@ python scripts/test_tracing.py
 
 Each trace is also viewable directly in the Langfuse dashboard using the
 `trace_id` the script prints for it.
+
+## Running the frontend
+
+Start the backend API first:
+
+```
+python -m uvicorn src.api.main:app --reload
+```
+
+Then, in a separate terminal, install and start the frontend:
+
+```
+cd frontend
+npm install
+npm run dev
+```
+
+Open the URL Vite prints (`http://127.0.0.1:5173` by default). Pick a
+role, ask a question, and submit. The dev server proxies `/query`
+requests to `http://127.0.0.1:8000`, so both processes need to be
+running at the same time.
