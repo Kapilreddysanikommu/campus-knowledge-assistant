@@ -146,6 +146,34 @@ will be built out incrementally.
   without staleness detection side by side, along with the notes, then
   confirms the same behavior through the real `/query` endpoint.
 
+**Step 8: Grounded answer generation with citations**
+
+- `src/generation/prompt_builder.py` builds the prompt sent to the LLM: a
+  system prompt instructing it to answer using only the excerpts it is
+  given, to cite the source document for every part of its answer in the
+  format `(Source: <document title>)`, and to respond with an exact,
+  fixed refusal sentence if the excerpts do not actually answer the
+  question, rather than guess or use outside knowledge. The user message
+  contains only the retrieved chunk text and its document title and
+  academic year, never full source documents.
+- `src/generation/generator.py` has `AnswerGenerator`, which sends that
+  prompt to Claude (the official `anthropic` Python SDK, model
+  configurable via the `ANTHROPIC_MODEL` environment variable, default
+  `claude-opus-5`) and returns whether the refusal sentence was used, so
+  callers get a plain boolean instead of having to re-parse the answer
+  text.
+- `src/api/main.py` calls `generate_answer` as the final pipeline step,
+  after staleness detection, using only the resulting chunks; `POST
+  /query` now also returns `answer` and `has_sufficient_information`.
+  Since retrieval was already filtered by the caller's access level
+  before this step, the LLM never sees chunk text from a document outside
+  what the caller is permitted to read.
+- `scripts/test_generation.py` runs three cases through the real
+  endpoint: a question answerable from permitted documents (expects a
+  cited answer), the Step 6 RBAC case where the real answer exists only
+  in a document outside the caller's access level (expects a refusal),
+  and a question with no answer in any document (expects a refusal).
+
 ## Setup
 
 ```
@@ -160,6 +188,10 @@ details differ from the defaults:
 ```
 copy .env.example .env
 ```
+
+Then set `ANTHROPIC_API_KEY` in `.env` to your own Claude API key. This is
+required for answer generation (Step 8); everything before that step
+works without it.
 
 ## Setting up PostgreSQL
 
@@ -467,3 +499,17 @@ reordered result after it runs, and the staleness notes explaining which
 documents and years were found to overlap. A close-scoring older result
 moves below the newest result on the same topic; a clearly stronger older
 result is left where the reranker placed it.
+
+## Testing answer generation
+
+Requires `ANTHROPIC_API_KEY` to be set in `.env`. To run the three cases
+described above (answerable, RBAC-blocked, and no answer anywhere) and
+print each generated answer:
+
+```
+python scripts/test_generation.py
+```
+
+Case 1 should return a cited answer with `has_sufficient_information:
+true`. Cases 2 and 3 should both return the fixed refusal sentence with
+`has_sufficient_information: false`, rather than a guess.

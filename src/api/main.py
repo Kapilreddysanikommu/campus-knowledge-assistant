@@ -17,6 +17,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from src.api.access_control import VALID_ROLES, get_allowed_access_levels
 from src.api.schemas import QueryRequest, QueryResponse, QueryResultItem
 from src.embedding.embedder import ChunkEmbedder
+from src.generation.generator import AnswerGenerator
 from src.retrieval.reranker import ResultReranker
 from src.retrieval.search import combine_search_results, full_text_search, semantic_search
 from src.retrieval.staleness import detect_and_apply_staleness
@@ -25,9 +26,11 @@ from src.storage.database import get_connection
 app = FastAPI(title="Campus Knowledge Assistant API")
 
 # Loaded once at startup and reused across requests. These wrap
-# transformer models, which are far too slow to load on every request.
+# transformer models (and, for the generator, the Claude API client),
+# which are far too slow or wasteful to set up again on every request.
 embedder = ChunkEmbedder()
 reranker = ResultReranker()
+generator = AnswerGenerator()
 
 
 def get_user_role(x_user_role: str = Header(...)) -> str:
@@ -72,6 +75,12 @@ def query_documents(
     academic years, moves a close-scoring older result below the newest
     one on the same topic, and returns a plain-language note for every
     such case found.
+
+    Finally, generator.generate_answer sends only the resulting chunk
+    text (never full documents, and never content outside the caller's
+    allowed access levels) to Claude, which must answer using only that
+    text and cite its sources, or say it does not have enough information
+    rather than guess.
     """
     allowed_access_levels = get_allowed_access_levels(role)
 
@@ -84,6 +93,7 @@ def query_documents(
     hybrid_results = combine_search_results(semantic_results, full_text_results, top_k=request.top_k)
     reranked_results = reranker.rerank(request.question, hybrid_results)
     final_results, staleness_notes = detect_and_apply_staleness(reranked_results)
+    generated_answer = generator.generate_answer(request.question, final_results)
 
     return QueryResponse(
         question=request.question,
@@ -100,4 +110,6 @@ def query_documents(
             for result in final_results
         ],
         staleness_notes=[note.message for note in staleness_notes],
+        answer=generated_answer.answer,
+        has_sufficient_information=generated_answer.has_sufficient_information,
     )

@@ -28,3 +28,5 @@ class QueryResponse(BaseModel):
     allowed_access_levels: List[str]
     results: List[QueryResultItem]
     staleness_notes: List[str]
+    answer: str
+    has_sufficient_information: bool
