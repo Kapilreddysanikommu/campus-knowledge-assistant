@@ -174,6 +174,33 @@ will be built out incrementally.
   in a document outside the caller's access level (expects a refusal),
   and a question with no answer in any document (expects a refusal).
 
+**Step 9: Evaluation suite**
+
+- `data/evaluation_test_set.json` has 31 question-answer pairs against
+  the real ingested documents: questions with a clear answer, questions
+  that should be refused because no document answers them, questions
+  that should be refused because the real answer exists only outside the
+  caller's access level (the Step 6 RBAC case, extended to several
+  different facts and roles), and adversarial phrasings (paraphrases,
+  false premises, compound questions, and a genuine staleness case where
+  two documents give different figures for the same policy).
+- `src/evaluation/pipeline_runner.py` runs the full pipeline (retrieval,
+  reranking, staleness detection, generation) for one test case.
+- `src/evaluation/checks.py` has fast, exact checks that need no LLM
+  call: did the system refuse exactly when it should have, and did a
+  document outside the caller's access level ever get retrieved.
+- `src/evaluation/ragas_evaluation.py` scores each answerable case with
+  the Ragas evaluation library: faithfulness (does the generated answer
+  actually match the retrieved chunks, rather than being hallucinated),
+  and context precision and recall (did retrieval find the right
+  chunks). Ragas's classic RAG metrics still need an older langchain-
+  based LLM wrapper internally; Claude is wired in as the judge model
+  through that wrapper rather than through OpenAI.
+- `scripts/run_evaluation.py` runs every test case through the real
+  pipeline, scores it, and prints a summary: overall pass rate, average
+  Ragas scores, a per-category breakdown, and every low-scoring or
+  failing case by name so weak spots are easy to find.
+
 ## Setup
 
 ```
@@ -513,3 +540,21 @@ python scripts/test_generation.py
 Case 1 should return a cited answer with `has_sufficient_information:
 true`. Cases 2 and 3 should both return the fixed refusal sentence with
 `has_sufficient_information: false`, rather than a guess.
+
+## Running the evaluation suite
+
+Requires `ANTHROPIC_API_KEY` to be set in `.env`. Runs all 31 test cases
+in `data/evaluation_test_set.json` through the real pipeline and prints a
+scored summary:
+
+```
+python scripts/run_evaluation.py
+```
+
+This makes one generation call per test case plus, for every case where
+the system is expected to answer, three additional Claude calls to score
+it with Ragas, so a full run is on the order of 80-90 API calls and takes
+several minutes. The summary reports the overall pass rate, average
+faithfulness, context precision, and context recall, a per-category
+breakdown, and every low-scoring or failing case by id and question, so
+weak spots can be looked up directly in the test set file.

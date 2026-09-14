@@ -1,0 +1,294 @@
+[
+  {
+    "id": "clear-01",
+    "category": "clear_answer",
+    "question": "What GPA is required for advancement to candidacy in the MSADI program?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Admission Requirements"],
+    "reference_answer": "Graduate students must achieve a minimum cumulative and program GPA of 3.0, along with classified standing and satisfying the Campus Graduate Graduation Writing Assessment Requirement (CGGWAR), and must graduate within the seven-year time limit for degree completion."
+  },
+  {
+    "id": "clear-02",
+    "category": "clear_answer",
+    "question": "What courses do the MSADI admission waiver exams cover?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Admission Requirements"],
+    "reference_answer": "Waiver exams assess competency equivalent to DATA 200, DATA 201, and DATA 202; depending on the results, students may be required to complete the corresponding course(s)."
+  },
+  {
+    "id": "clear-03",
+    "category": "clear_answer",
+    "question": "How much is data scientist employment projected to grow according to the MSADI program overview, and how does that compare to other occupations?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Program Overview"],
+    "reference_answer": "Data scientist roles are projected to grow by 34 percent over the coming decade, significantly outpacing the average 3 percent increase for all other occupations."
+  },
+  {
+    "id": "clear-04",
+    "category": "clear_answer",
+    "question": "What was the MSADI program previously called?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Program Overview"],
+    "reference_answer": "The MS in Applied Data Intelligence program was formerly known as the MS in Data Analytics."
+  },
+  {
+    "id": "clear-05",
+    "category": "clear_answer",
+    "question": "According to the department FAQ, how much faster is the department's high-end GPU than the Colab tier GPU?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Program FAQs"],
+    "reference_answer": "The department's GPU (an NVIDIA GeForce RTX 5090) is 3 times faster than the Colab tier GPU (T4)."
+  },
+  {
+    "id": "clear-06",
+    "category": "clear_answer",
+    "question": "Can a current MSADI student take a class from another program?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Program FAQs"],
+    "reference_answer": "Yes, an MSADI student can take a class from another program with the approval of the Graduate Coordinator."
+  },
+  {
+    "id": "clear-07",
+    "category": "clear_answer",
+    "question": "What career roles does the MSADI catalog page list as potential outcomes for graduates?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Catalog Program Page"],
+    "reference_answer": "Potential career roles include data analyst, data administrator, business intelligence analyst, and information research scientist."
+  },
+  {
+    "id": "clear-08",
+    "category": "clear_answer",
+    "question": "How many total units are required to complete the MSADI degree, and what GPA must a student maintain to graduate?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Catalog Program Page"],
+    "reference_answer": "The program requires 30 semester units of 200-level courses, and the student must achieve minimum candidacy and cumulative GPAs of 3.0 to graduate."
+  },
+  {
+    "id": "clear-09",
+    "category": "clear_answer",
+    "question": "What two courses make up the thesis option (Plan A) for the MSADI culminating experience?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Catalog Program Page"],
+    "reference_answer": "Plan A (Thesis) consists of DATA 299A and DATA 299B, the MSADI Thesis I and Thesis II courses."
+  },
+  {
+    "id": "clear-10",
+    "category": "clear_answer",
+    "question": "What is the basic letter grading system at San Jose State University?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["Non-Traditional Grading Policy"],
+    "reference_answer": "A, B, C, D, and F are the basic grading system at San Jose State University, applying to all coursework acceptable toward a degree program except as otherwise provided."
+  },
+  {
+    "id": "clear-11",
+    "category": "clear_answer",
+    "question": "Under the 1988 policy, what is the maximum number of Credit/No Credit units an undergraduate can apply toward the baccalaureate degree?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["Non-Traditional Grading Policy"],
+    "reference_answer": "A student may accumulate a maximum of 60 semester units of Credit/No Credit grades toward the baccalaureate degree."
+  },
+  {
+    "id": "clear-12",
+    "category": "clear_answer",
+    "question": "What is the minimum letter grade an undergraduate needs to earn Credit (CR) in a course?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["Credit/No Credit Grading Policy"],
+    "reference_answer": "For an undergraduate course, the CR grade means a minimum of C- or better."
+  },
+  {
+    "id": "clear-13",
+    "category": "clear_answer",
+    "question": "What does the WU grade symbol mean, and how is it treated when computing GPA?",
+    "role": "faculty",
+    "should_refuse": false,
+    "expected_documents": ["Grading Symbols, Drop and Withdrawal Policy"],
+    "reference_answer": "WU stands for Withdrawal Unauthorized. It is used when a student who is enrolled on the census date does not officially withdraw from a course but fails to complete it. It is treated as a failing grade and counted as units attempted but not passed when computing grade point average."
+  },
+  {
+    "id": "clear-14",
+    "category": "clear_answer",
+    "question": "What is the maximum number of units a graduate student may withdraw from (grade of W) at SJSU?",
+    "role": "faculty",
+    "should_refuse": false,
+    "expected_documents": ["Grading Symbols, Drop and Withdrawal Policy"],
+    "reference_answer": "Graduate students may withdraw (W) from no more than 9 units."
+  },
+  {
+    "id": "no-answer-01",
+    "category": "no_answer",
+    "question": "What is the deadline to add a class each semester?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "no-answer-02",
+    "category": "no_answer",
+    "question": "How much does on-campus housing cost at SJSU?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "no-answer-03",
+    "category": "no_answer",
+    "question": "Who is the current dean of the College of Information, Data and Society?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "no-answer-04",
+    "category": "no_answer",
+    "question": "What programming languages are taught in DATA 228?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "no-answer-05",
+    "category": "no_answer",
+    "question": "What is the application fee for the MSADI program?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-01",
+    "category": "rbac_refusal",
+    "question": "What is the process for a grade appeal?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-02",
+    "category": "rbac_refusal",
+    "question": "What does a WU grade mean?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-03",
+    "category": "rbac_refusal",
+    "question": "How many units can an undergraduate withdraw from (grade of W) before hitting the university limit?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-04",
+    "category": "rbac_refusal",
+    "question": "What happens if a grade change request is approved by the instructor but denied at a later level of review?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-05",
+    "category": "rbac_refusal",
+    "question": "What is the difference between a W and a WB grade on a transcript?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "rbac-06",
+    "category": "rbac_refusal",
+    "question": "Under what circumstances can an instructor change a grade once it has been assigned?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents."
+  },
+  {
+    "id": "adversarial-01",
+    "category": "adversarial",
+    "question": "If I stop attending a class without officially dropping it, what happens to my grade?",
+    "role": "student",
+    "should_refuse": true,
+    "expected_documents": [],
+    "real_answer_document": "Grading Symbols, Drop and Withdrawal Policy",
+    "reference_answer": "I don't have enough information to answer this question based on the available documents.",
+    "notes": "Indirect paraphrase of the WU grade question, combined with the Step 6 RBAC case: the real answer exists only in the faculty-only document."
+  },
+  {
+    "id": "adversarial-02",
+    "category": "adversarial",
+    "question": "Is it true that graduate students can apply more than half of their units toward the MSADI degree as Credit/No Credit?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["Credit/No Credit Grading Policy"],
+    "reference_answer": "No, that is not accurate. A graduate student may accumulate a maximum of 40 percent of the total units required to graduate as Credit/No Credit grades, which is less than half.",
+    "notes": "False-premise question; tests whether the model corrects the premise instead of agreeing with it."
+  },
+  {
+    "id": "adversarial-03",
+    "category": "adversarial",
+    "question": "What GPA is needed for MSADI candidacy, and what is the application fee?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Admission Requirements"],
+    "reference_answer": "A minimum cumulative and program GPA of 3.0 is needed for candidacy. The available documents do not state an application fee amount.",
+    "notes": "Compound question mixing an answerable part with an unanswerable part; tests partial grounding rather than all-or-nothing refusal or guessing."
+  },
+  {
+    "id": "adversarial-04",
+    "category": "adversarial",
+    "question": "What percentage of units toward a graduate degree can be taken as Credit/No Credit?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["Credit/No Credit Grading Policy"],
+    "reference_answer": "A graduate student may accumulate a maximum of 40 percent of the total units required to graduate as Credit/No Credit grades. This reflects the 2020 amendment (Amendment A to F18-5), which superseded the earlier 30 percent limit stated in the 2018 policy.",
+    "notes": "Staleness case: the 2018 University Grading System Policy states 30 percent, and the 2020 amendment (Credit/No Credit Grading Policy) supersedes it with 40 percent. Tests Step 7 staleness handling end to end."
+  },
+  {
+    "id": "adversarial-05",
+    "category": "adversarial",
+    "question": "Since the MSADI program requires a 4.0 GPA for candidacy, what other requirements are there?",
+    "role": "student",
+    "should_refuse": false,
+    "expected_documents": ["MSADI Admission Requirements"],
+    "reference_answer": "The premise is incorrect: the actual requirement is a minimum cumulative and program GPA of 3.0, not 4.0. Other requirements include classified standing, satisfying the CGGWAR requirement, and completing candidacy within the seven-year time limit.",
+    "notes": "Another false-premise question, testing the same robustness as adversarial-02 with a different fact."
+  },
+  {
+    "id": "adversarial-06",
+    "category": "adversarial",
+    "question": "What is the difference between a W and a WB grade on a transcript?",
+    "role": "faculty",
+    "should_refuse": false,
+    "expected_documents": ["Grading Symbols, Drop and Withdrawal Policy"],
+    "reference_answer": "A W is a standard withdrawal. A WB is used for withdrawals during the final twenty percent of instruction due to circumstances clearly beyond the student's control, such as accident or serious illness, when an Incomplete is not practicable. Both W and WB revert to W on the official transcript; they are distinguished only on the unofficial transcript.",
+    "notes": "Same question as rbac-05, asked by a faculty member instead of a student, to directly contrast permitted versus blocked access to identical phrasing."
+  }
+]
